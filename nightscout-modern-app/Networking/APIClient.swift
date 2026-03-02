@@ -69,6 +69,10 @@ final class APIClient: @unchecked Sendable {
         let (data, response): (Data, URLResponse)
         do {
             (data, response) = try await session.data(for: request)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch let urlError as URLError where urlError.code == .cancelled {
+            throw CancellationError()
         } catch {
             print("[API] ❌ Network error: \(error.localizedDescription)")
             throw APIError.networkError(error.localizedDescription)

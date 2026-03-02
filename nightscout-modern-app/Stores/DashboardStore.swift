@@ -141,6 +141,8 @@ final class DashboardStore {
                     let result = try await client.getGlucoseRange(startDate: range.start, endDate: range.end)
                     self.entries = result
                     self.debugLog.append("✅ entries: \(result.count)")
+                } catch is CancellationError {
+                    // Silently ignore — view lifecycle cancellation
                 } catch {
                     self.debugLog.append("❌ entries: \(error.localizedDescription)")
                     print("[Dashboard] ❌ entries error: \(error)")
@@ -151,6 +153,8 @@ final class DashboardStore {
                     let result = try await client.getLatestGlucose()
                     self.latest = result
                     self.debugLog.append("✅ latest: sgv=\(result.sgv)")
+                } catch is CancellationError {
+                    // Silently ignore
                 } catch {
                     self.debugLog.append("❌ latest: \(error.localizedDescription)")
                     print("[Dashboard] ❌ latest error: \(error)")
@@ -165,6 +169,8 @@ final class DashboardStore {
                     )
                     self.analytics = result
                     self.debugLog.append("✅ analytics: \(result.totalReadings) readings")
+                } catch is CancellationError {
+                    // Silently ignore
                 } catch {
                     self.debugLog.append("❌ analytics: \(error.localizedDescription)")
                     print("[Dashboard] ❌ analytics error: \(error)")

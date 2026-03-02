@@ -77,7 +77,8 @@ struct DashboardView: View {
             async let ages: () = store.refreshDeviceAges()
             _ = await (data, patterns, iobcob, ages)
         }
-        .task {
+        .task(id: authStore.isAuthenticated) {
+            guard authStore.isAuthenticated else { return }
             store.apiClient = authStore.apiClient
             await initialLoad()
         }
