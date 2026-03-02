@@ -1,24 +1,22 @@
-//
-//  ContentView.swift
-//  nightscout-modern-app
-//
-//  Created by Diego Castilho on 27/02/26.
-//
-
 import SwiftUI
 
 struct ContentView: View {
+    @Environment(AuthStore.self) private var authStore
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        Group {
+            if authStore.isAuthenticated {
+                MainNavigationView()
+            } else {
+                LoginView()
+            }
         }
-        .padding()
+        .animation(.easeInOut(duration: 0.3), value: authStore.isAuthenticated)
     }
 }
 
 #Preview {
     ContentView()
+        .environment(AuthStore())
+        .environment(DashboardStore())
 }
