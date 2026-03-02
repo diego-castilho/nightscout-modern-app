@@ -71,7 +71,11 @@ struct DashboardView: View {
             .padding(.vertical, 12)
         }
         .refreshable {
-            await store.refreshData()
+            async let data: () = store.refreshData()
+            async let patterns: () = store.refreshPatterns()
+            async let iobcob: () = store.refreshIOBCOB()
+            async let ages: () = store.refreshDeviceAges()
+            _ = await (data, patterns, iobcob, ages)
         }
         .task {
             store.apiClient = authStore.apiClient
