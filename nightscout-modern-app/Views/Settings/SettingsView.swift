@@ -94,13 +94,15 @@ struct SettingsView: View {
 
     /// Creates a Binding<Double> that reads/writes an Int threshold in the current display unit.
     /// Internal storage is always mg/dL; the binding converts to/from the selected unit.
+    /// Values are clamped to 40–400 mg/dL.
     private func thresholdBinding(_ keyPath: WritableKeyPath<AlarmThresholds, Int>) -> Binding<Double> {
         Binding(
             get: {
                 GlucoseUnit.toDisplayUnit(Double(store.alarmThresholds[keyPath: keyPath]), unit: store.unit)
             },
             set: { newValue in
-                store.alarmThresholds[keyPath: keyPath] = Int(GlucoseUnit.fromDisplayUnit(newValue, unit: store.unit))
+                let mgdl = Int(GlucoseUnit.fromDisplayUnit(newValue, unit: store.unit))
+                store.alarmThresholds[keyPath: keyPath] = min(400, max(40, mgdl))
             }
         )
     }

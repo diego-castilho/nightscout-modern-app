@@ -71,16 +71,34 @@ struct TIRChartView: View {
         .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
+    // MARK: - Range label formatting
+
+    private func fmtThreshold(_ value: Int) -> String {
+        GlucoseUnit.formatGlucose(value, unit: store.unit)
+    }
+
+    private func rangeLabel(_ name: String, lowThreshold: Int?, highThreshold: Int?) -> String {
+        let ul = store.unit.label
+        if let low = lowThreshold, let high = highThreshold {
+            return "\(name) - \(fmtThreshold(low))–\(fmtThreshold(high)) \(ul)"
+        } else if let high = highThreshold {
+            return "\(name) - <\(fmtThreshold(high)) \(ul)"
+        } else if let low = lowThreshold {
+            return "\(name) - >\(fmtThreshold(low)) \(ul)"
+        }
+        return name
+    }
+
     // MARK: - Targets Table
 
     private func targetsTable(_ tir: TimeInRange) -> some View {
         let t = store.alarmThresholds
-        let rows: [(label: String, range: String, target: String, pct: Double, met: Bool, color: Color)] = [
-            ("Muito Baixo", "< \(t.veryLow)", "≤ 1%", tir.percentVeryLow, tir.percentVeryLow <= 1, GlucoseColors.veryLow),
-            ("Baixo", "\(t.veryLow)–\(t.low)", "≤ 4%", tir.percentLow, tir.percentLow <= 4, GlucoseColors.low),
-            ("No Alvo", "\(t.low)–\(t.high)", "≥ 70%", tir.percentInRange, tir.percentInRange >= 70, GlucoseColors.inRange),
-            ("Alto", "\(t.high)–\(t.veryHigh)", "≤ 25%", tir.percentHigh, tir.percentHigh <= 25, GlucoseColors.high),
-            ("Muito Alto", "> \(t.veryHigh)", "≤ 5%", tir.percentVeryHigh, tir.percentVeryHigh <= 5, GlucoseColors.veryHigh),
+        let rows: [(label: String, target: String, pct: Double, met: Bool, color: Color)] = [
+            (rangeLabel("Muito Baixo", lowThreshold: nil, highThreshold: t.veryLow), "≤ 1%", tir.percentVeryLow, tir.percentVeryLow <= 1, GlucoseColors.veryLow),
+            (rangeLabel("Baixo", lowThreshold: t.veryLow, highThreshold: t.low), "≤ 4%", tir.percentLow, tir.percentLow <= 4, GlucoseColors.low),
+            (rangeLabel("No Alvo", lowThreshold: t.low, highThreshold: t.high), "≥ 70%", tir.percentInRange, tir.percentInRange >= 70, GlucoseColors.inRange),
+            (rangeLabel("Alto", lowThreshold: t.high, highThreshold: t.veryHigh), "≤ 25%", tir.percentHigh, tir.percentHigh <= 25, GlucoseColors.high),
+            (rangeLabel("Muito Alto", lowThreshold: t.veryHigh, highThreshold: nil), "≤ 5%", tir.percentVeryHigh, tir.percentVeryHigh <= 5, GlucoseColors.veryHigh),
         ]
 
         return VStack(spacing: 0) {
@@ -104,7 +122,7 @@ struct TIRChartView: View {
             ForEach(rows.indices, id: \.self) { i in
                 let row = rows[i]
                 HStack(spacing: 4) {
-                    // Color swatch + label
+                    // Color swatch + label with range values
                     HStack(spacing: 5) {
                         RoundedRectangle(cornerRadius: 2)
                             .fill(row.color)
@@ -112,6 +130,8 @@ struct TIRChartView: View {
                         Text(row.label)
                             .font(.system(size: 11))
                             .foregroundStyle(.primary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
 
