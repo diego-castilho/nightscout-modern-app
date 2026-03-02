@@ -3,6 +3,11 @@ import SwiftUI
 struct TIRChartView: View {
     @Environment(DashboardStore.self) private var store
 
+    /// Analytics always uses at least 24h; only 48h shows a different range.
+    private var analyticsLabel: String {
+        store.period == .h48 ? "baseado nas últimas 48h" : "baseado nas últimas 24h"
+    }
+
     var body: some View {
         if let tir = store.analytics?.timeInRange {
             tirContent(tir)
@@ -16,7 +21,7 @@ struct TIRChartView: View {
                 Text("Tempo no Alvo (TIR)")
                     .font(.subheadline.weight(.semibold))
                 Spacer()
-                Text(store.period.label)
+                Text(analyticsLabel)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }

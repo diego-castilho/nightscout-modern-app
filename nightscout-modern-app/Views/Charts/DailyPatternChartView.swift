@@ -4,6 +4,11 @@ import Charts
 struct DailyPatternChartView: View {
     @Environment(DashboardStore.self) private var store
 
+    /// Analytics always uses at least 24h; only 48h shows a different range.
+    private var analyticsLabel: String {
+        store.period == .h48 ? "baseado nas últimas 48h" : "baseado nas últimas 24h"
+    }
+
     var body: some View {
         if let analytics = store.analytics, !analytics.dailyPatterns.isEmpty {
             chartContent(analytics)
@@ -90,7 +95,7 @@ struct DailyPatternChartView: View {
                 Text("Padrão Diário (AGP)")
                     .font(.subheadline.weight(.semibold))
                 Spacer()
-                Text("\(Int(analytics.period.days))d")
+                Text(analyticsLabel)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
