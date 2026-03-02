@@ -320,7 +320,6 @@ struct GlucoseAreaChartView: View {
             .font(.system(size: 9, weight: .medium))
             .foregroundStyle(color)
             .padding(.horizontal, 3)
-            .background(.background.opacity(0.8))
     }
 
     // MARK: - Gradient

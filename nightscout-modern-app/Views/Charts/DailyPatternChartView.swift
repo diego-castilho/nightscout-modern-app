@@ -10,8 +10,41 @@ struct DailyPatternChartView: View {
         }
     }
 
+    // MARK: - Processed data point for the chart
+    // Mirrors the web's ChartPoint: stacked deltas, not absolute values.
+
+    private struct ChartPoint: Identifiable {
+        let id: Int // hour
+        let hour: Int
+        let median: Double
+        let p5: Double
+        let p25: Double
+        let p75: Double
+        let p95: Double
+        let count: Int
+    }
+
+    private func buildChartPoints(_ patterns: [DailyPattern]) -> [ChartPoint] {
+        patterns.sorted { $0.hour < $1.hour }.map { p in
+            let p5  = resolveP5(p)
+            let p25 = resolveP25(p)
+            let p75 = resolveP75(p)
+            let p95 = resolveP95(p)
+            return ChartPoint(
+                id: p.hour,
+                hour: p.hour,
+                median: p.median,
+                p5: p5,
+                p25: p25,
+                p75: p75,
+                p95: p95,
+                count: p.count
+            )
+        }
+    }
+
     private func chartContent(_ analytics: GlucoseAnalytics) -> some View {
-        let patterns = analytics.dailyPatterns.sorted { $0.hour < $1.hour }
+        let points = buildChartPoints(analytics.dailyPatterns)
         let thresholds = store.alarmThresholds
         let ul = store.unit.label
         let yMax: Double = 350
@@ -32,87 +65,87 @@ struct DailyPatternChartView: View {
 
             // Chart
             Chart {
-                // Background zone bands (matching glucose chart)
+                // Background zone bands
                 zoneBands(thresholds: thresholds, yMax: yMax)
 
-                // Threshold reference lines with labels
+                // Threshold reference lines (no labels, just dashed lines)
                 thresholdLines(thresholds: thresholds)
 
                 // P5–P95 outer band (light blue)
-                ForEach(patterns, id: \.hour) { pattern in
+                ForEach(points) { pt in
                     AreaMark(
-                        x: .value("Hora", pattern.hour),
-                        yStart: .value("P5", resolveP5(pattern)),
-                        yEnd: .value("P95", resolveP95(pattern))
+                        x: .value("Hora", pt.hour),
+                        yStart: .value("P5", pt.p5),
+                        yEnd: .value("P95", pt.p95)
                     )
                     .foregroundStyle(Color(hex: "#3b82f6").opacity(0.12))
-                    .interpolationMethod(.catmullRom)
+                    .interpolationMethod(.monotone)
                 }
 
                 // P25–P75 inner band (medium blue)
-                ForEach(patterns, id: \.hour) { pattern in
+                ForEach(points) { pt in
                     AreaMark(
-                        x: .value("Hora", pattern.hour),
-                        yStart: .value("P25", resolveP25(pattern)),
-                        yEnd: .value("P75", resolveP75(pattern))
+                        x: .value("Hora", pt.hour),
+                        yStart: .value("P25", pt.p25),
+                        yEnd: .value("P75", pt.p75)
                     )
                     .foregroundStyle(Color(hex: "#3b82f6").opacity(0.30))
-                    .interpolationMethod(.catmullRom)
-                }
-
-                // P25 border line
-                ForEach(patterns, id: \.hour) { pattern in
-                    LineMark(
-                        x: .value("Hora", pattern.hour),
-                        y: .value("P25Line", resolveP25(pattern))
-                    )
-                    .foregroundStyle(Color(hex: "#3b82f6").opacity(0.50))
-                    .lineStyle(StrokeStyle(lineWidth: 1))
-                    .interpolationMethod(.catmullRom)
-                }
-
-                // P75 border line
-                ForEach(patterns, id: \.hour) { pattern in
-                    LineMark(
-                        x: .value("Hora", pattern.hour),
-                        y: .value("P75Line", resolveP75(pattern))
-                    )
-                    .foregroundStyle(Color(hex: "#3b82f6").opacity(0.50))
-                    .lineStyle(StrokeStyle(lineWidth: 1))
-                    .interpolationMethod(.catmullRom)
-                }
-
-                // P5 border line
-                ForEach(patterns, id: \.hour) { pattern in
-                    LineMark(
-                        x: .value("Hora", pattern.hour),
-                        y: .value("P5Line", resolveP5(pattern))
-                    )
-                    .foregroundStyle(Color(hex: "#3b82f6").opacity(0.28))
-                    .lineStyle(StrokeStyle(lineWidth: 1))
-                    .interpolationMethod(.catmullRom)
+                    .interpolationMethod(.monotone)
                 }
 
                 // P95 border line
-                ForEach(patterns, id: \.hour) { pattern in
+                ForEach(points) { pt in
                     LineMark(
-                        x: .value("Hora", pattern.hour),
-                        y: .value("P95Line", resolveP95(pattern))
+                        x: .value("Hora", pt.hour),
+                        y: .value("P95Line", pt.p95)
                     )
                     .foregroundStyle(Color(hex: "#3b82f6").opacity(0.28))
                     .lineStyle(StrokeStyle(lineWidth: 1))
-                    .interpolationMethod(.catmullRom)
+                    .interpolationMethod(.monotone)
+                }
+
+                // P75 border line
+                ForEach(points) { pt in
+                    LineMark(
+                        x: .value("Hora", pt.hour),
+                        y: .value("P75Line", pt.p75)
+                    )
+                    .foregroundStyle(Color(hex: "#3b82f6").opacity(0.50))
+                    .lineStyle(StrokeStyle(lineWidth: 1))
+                    .interpolationMethod(.monotone)
+                }
+
+                // P25 border line
+                ForEach(points) { pt in
+                    LineMark(
+                        x: .value("Hora", pt.hour),
+                        y: .value("P25Line", pt.p25)
+                    )
+                    .foregroundStyle(Color(hex: "#3b82f6").opacity(0.50))
+                    .lineStyle(StrokeStyle(lineWidth: 1))
+                    .interpolationMethod(.monotone)
+                }
+
+                // P5 border line
+                ForEach(points) { pt in
+                    LineMark(
+                        x: .value("Hora", pt.hour),
+                        y: .value("P5Line", pt.p5)
+                    )
+                    .foregroundStyle(Color(hex: "#3b82f6").opacity(0.28))
+                    .lineStyle(StrokeStyle(lineWidth: 1))
+                    .interpolationMethod(.monotone)
                 }
 
                 // Median line (P50) — solid blue, thicker
-                ForEach(patterns, id: \.hour) { pattern in
+                ForEach(points) { pt in
                     LineMark(
-                        x: .value("Hora", pattern.hour),
-                        y: .value("Mediana", pattern.median)
+                        x: .value("Hora", pt.hour),
+                        y: .value("Mediana", pt.median)
                     )
                     .foregroundStyle(Color(hex: "#3b82f6"))
                     .lineStyle(StrokeStyle(lineWidth: 2.5))
-                    .interpolationMethod(.catmullRom)
+                    .interpolationMethod(.monotone)
                 }
             }
             .chartYScale(domain: 0...yMax)
@@ -192,45 +225,25 @@ struct DailyPatternChartView: View {
         .foregroundStyle(GlucoseColors.veryHigh.opacity(0.06))
     }
 
-    // MARK: - Threshold Lines
+    // MARK: - Threshold Lines (no labels, just dashed lines in zone colors)
 
     @ChartContentBuilder
     private func thresholdLines(thresholds: AlarmThresholds) -> some ChartContent {
-        RuleMark(y: .value("Muito Baixo", thresholds.veryLow))
+        RuleMark(y: .value("", thresholds.veryLow))
             .foregroundStyle(GlucoseColors.veryLow.opacity(0.6))
             .lineStyle(StrokeStyle(lineWidth: 1, dash: [2, 4]))
-            .annotation(position: .bottom, alignment: .trailing) {
-                thresholdLabel(GlucoseUnit.formatGlucose(thresholds.veryLow, unit: store.unit), color: GlucoseColors.veryLow)
-            }
 
-        RuleMark(y: .value("Baixo", thresholds.low))
+        RuleMark(y: .value("", thresholds.low))
             .foregroundStyle(GlucoseColors.low.opacity(0.6))
             .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
-            .annotation(position: .top, alignment: .trailing) {
-                thresholdLabel(GlucoseUnit.formatGlucose(thresholds.low, unit: store.unit), color: GlucoseColors.low)
-            }
 
-        RuleMark(y: .value("Alto", thresholds.high))
+        RuleMark(y: .value("", thresholds.high))
             .foregroundStyle(GlucoseColors.high.opacity(0.6))
             .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
-            .annotation(position: .bottom, alignment: .trailing) {
-                thresholdLabel(GlucoseUnit.formatGlucose(thresholds.high, unit: store.unit), color: GlucoseColors.high)
-            }
 
-        RuleMark(y: .value("Muito Alto", thresholds.veryHigh))
+        RuleMark(y: .value("", thresholds.veryHigh))
             .foregroundStyle(GlucoseColors.veryHigh.opacity(0.6))
             .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 4]))
-            .annotation(position: .top, alignment: .trailing) {
-                thresholdLabel(GlucoseUnit.formatGlucose(thresholds.veryHigh, unit: store.unit), color: GlucoseColors.veryHigh)
-            }
-    }
-
-    private func thresholdLabel(_ text: String, color: Color) -> some View {
-        Text(text)
-            .font(.system(size: 9, weight: .medium))
-            .foregroundStyle(color)
-            .padding(.horizontal, 3)
-            .background(.background.opacity(0.8))
     }
 
     // MARK: - Inline Stats
