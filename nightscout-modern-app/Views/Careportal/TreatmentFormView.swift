@@ -212,7 +212,7 @@ struct TreatmentFormView: View {
         var body: [String: Any] = [
             "eventType": eventType,
             "created_at": formatter.string(from: adjustedDate),
-            "enteredBy": "nightscout-app",
+            "enteredBy": "dcglyco-app",
             "units": store.unit.rawValue
         ]
 

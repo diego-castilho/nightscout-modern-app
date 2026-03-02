@@ -302,7 +302,7 @@ struct BolusCalculatorView: View {
         var body: [String: Any] = [
             "eventType": eventType,
             "created_at": formatter.string(from: Date()),
-            "enteredBy": "nightscout-app",
+            "enteredBy": "dcglyco-app",
             "units": store.unit.rawValue,
         ]
 

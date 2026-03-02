@@ -161,7 +161,7 @@ struct MainNavigationView: View {
                 }
             }
         }
-        .navigationTitle("Nightscout")
+        .navigationTitle("DCGlyco")
         #if os(macOS)
         .navigationSplitViewColumnWidth(min: 180, ideal: 220)
         #endif

@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct nightscout_modern_appApp: App {
+struct DCGlycoApp: App {
     @State private var authStore = AuthStore()
     @State private var dashboardStore = DashboardStore()
 

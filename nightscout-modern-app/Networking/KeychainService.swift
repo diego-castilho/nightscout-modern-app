@@ -2,7 +2,7 @@ import Foundation
 import Security
 
 enum KeychainService {
-    private static let service = "com.nightscout.modern"
+    private static let service = "me.diegocastilho.dcglyco"
 
     static func save(token: String, forKey key: String) {
         guard let data = token.data(using: .utf8) else { return }

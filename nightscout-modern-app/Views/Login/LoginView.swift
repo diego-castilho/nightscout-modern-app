@@ -18,7 +18,7 @@ struct LoginView: View {
                     .font(.system(size: 48))
                     .foregroundStyle(GlucoseColors.inRange)
 
-                Text("Nightscout Modern")
+                Text("DCGlyco")
                     .font(.title.bold())
 
                 Text("Monitoramento contínuo de glicose")
