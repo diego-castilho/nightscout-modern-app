@@ -17,9 +17,9 @@ struct StatsGridView: View {
     @Environment(DashboardStore.self) private var store
 
     var body: some View {
-        if store.isLoading && store.analytics == nil {
+        if store.isLoading && store.periodAnalytics == nil {
             loadingGrid
-        } else if let stats = store.analytics?.stats {
+        } else if let stats = store.periodAnalytics?.stats {
             statsGrid(stats)
         }
     }
@@ -50,7 +50,7 @@ struct StatsGridView: View {
                 title: "A1C EST.",
                 value: String(format: "%.1f", stats.estimatedA1c),
                 unit: "%",
-                subtitle: store.analytics.map { "\(Int($0.period.days))d analisados" },
+                subtitle: store.periodAnalytics.map { "\(Int($0.period.days))d analisados" },
                 status: a1cStat
             )
             StatCard(

@@ -66,7 +66,8 @@ final class DashboardStore {
     // MARK: - Data State
     var entries: [GlucoseEntry] = []
     var latest: GlucoseEntry?
-    var analytics: GlucoseAnalytics?
+    var analytics: GlucoseAnalytics?        // Always 24h or 48h (for TIR, DailyPattern)
+    var periodAnalytics: GlucoseAnalytics?  // Matches selected period (for StatsGrid)
     var treatments: [Treatment] = []
     var isLoading = false
     var error: String?
@@ -134,6 +135,8 @@ final class DashboardStore {
         debugLog.removeAll()
         debugLog.append("Fetching data... period=\(period.rawValue)")
 
+        let needsSeparatePeriodAnalytics = (period != .h24 && period != .h48)
+
         // Fetch each independently so one failure doesn't block the others
         await withTaskGroup(of: Void.self) { group in
             group.addTask { @MainActor [self] in
@@ -160,6 +163,7 @@ final class DashboardStore {
                     print("[Dashboard] ❌ latest error: \(error)")
                 }
             }
+            // Analytics for TIR / DailyPattern (always ≥24h)
             group.addTask { @MainActor [self] in
                 do {
                     let result = try await client.getAnalytics(
@@ -168,12 +172,35 @@ final class DashboardStore {
                         thresholds: self.alarmThresholds
                     )
                     self.analytics = result
+                    // When period ≥24h, period analytics is the same
+                    if !needsSeparatePeriodAnalytics {
+                        self.periodAnalytics = result
+                    }
                     self.debugLog.append("✅ analytics: \(result.totalReadings) readings")
                 } catch is CancellationError {
                     // Silently ignore
                 } catch {
                     self.debugLog.append("❌ analytics: \(error.localizedDescription)")
                     print("[Dashboard] ❌ analytics error: \(error)")
+                }
+            }
+            // Period-specific analytics for StatsGrid (only when period < 24h)
+            if needsSeparatePeriodAnalytics {
+                group.addTask { @MainActor [self] in
+                    do {
+                        let result = try await client.getAnalytics(
+                            startDate: range.start,
+                            endDate: range.end,
+                            thresholds: self.alarmThresholds
+                        )
+                        self.periodAnalytics = result
+                        self.debugLog.append("✅ periodAnalytics: \(result.totalReadings) readings")
+                    } catch is CancellationError {
+                        // Silently ignore
+                    } catch {
+                        self.debugLog.append("❌ periodAnalytics: \(error.localizedDescription)")
+                        print("[Dashboard] ❌ periodAnalytics error: \(error)")
+                    }
                 }
             }
         }

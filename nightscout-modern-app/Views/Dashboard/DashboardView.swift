@@ -13,8 +13,8 @@ struct DashboardView: View {
                 HStack {
                     PeriodSelector(period: $store.period)
                     Spacer()
-                    if let analytics = store.analytics {
-                        Text("\(analytics.totalReadings) leituras · \(Int(analytics.period.days))d")
+                    if let periodAnalytics = store.periodAnalytics {
+                        Text("\(periodAnalytics.totalReadings) leituras · \(store.period.label)")
                             .font(.system(size: 10))
                             .foregroundStyle(.secondary)
                     }
