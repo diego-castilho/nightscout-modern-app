@@ -36,14 +36,14 @@ struct StatsGridView: View {
                 title: "MÉDIA",
                 value: GlucoseUnit.formatGlucose(stats.average, unit: store.unit),
                 unit: ul,
-                subtitle: "Mediana: \(GlucoseUnit.formatGlucose(stats.median, unit: store.unit))",
+                subtitle: "Mediana: \(GlucoseUnit.formatGlucose(stats.median, unit: store.unit)) \(ul)",
                 status: avgStatus
             )
             StatCard(
                 title: "GMI",
                 value: String(format: "%.1f", stats.gmi),
                 unit: "%",
-                subtitle: nil,
+                subtitle: "Glucose Management Indicator",
                 status: gmiStat
             )
             StatCard(
@@ -124,6 +124,8 @@ private struct StatCard: View {
                     .foregroundStyle(.secondary)
             }
 
+            Spacer(minLength: 0)
+
             if let subtitle {
                 Text(subtitle)
                     .font(.system(size: 10))
@@ -131,7 +133,7 @@ private struct StatCard: View {
                     .lineLimit(1)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(.ultraThinMaterial)
