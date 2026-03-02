@@ -11,7 +11,6 @@ struct DailyPatternChartView: View {
     }
 
     // MARK: - Processed data point for the chart
-    // Mirrors the web's ChartPoint: stacked deltas, not absolute values.
 
     private struct ChartPoint: Identifiable {
         let id: Int // hour
@@ -21,26 +20,60 @@ struct DailyPatternChartView: View {
         let p25: Double
         let p75: Double
         let p95: Double
-        let count: Int
     }
 
     private func buildChartPoints(_ patterns: [DailyPattern]) -> [ChartPoint] {
         patterns.sorted { $0.hour < $1.hour }.map { p in
-            let p5  = resolveP5(p)
-            let p25 = resolveP25(p)
-            let p75 = resolveP75(p)
-            let p95 = resolveP95(p)
-            return ChartPoint(
+            ChartPoint(
                 id: p.hour,
                 hour: p.hour,
                 median: p.median,
-                p5: p5,
-                p25: p25,
-                p75: p75,
-                p95: p95,
-                count: p.count
+                p5: resolveP5(p),
+                p25: resolveP25(p),
+                p75: resolveP75(p),
+                p95: resolveP95(p)
             )
         }
+    }
+
+    // MARK: - Row model for AreaMark series
+    // Each band (P5-P95, P25-P75) needs a unique series name so Swift Charts
+    // connects all its points into one continuous filled shape.
+
+    private struct BandRow: Identifiable {
+        let id: String  // "\(band)-\(hour)"
+        let hour: Int
+        let band: String
+        let low: Double
+        let high: Double
+    }
+
+    private struct LineRow: Identifiable {
+        let id: String  // "\(series)-\(hour)"
+        let hour: Int
+        let series: String
+        let value: Double
+    }
+
+    private func bandRows(_ points: [ChartPoint]) -> [BandRow] {
+        var rows: [BandRow] = []
+        for pt in points {
+            rows.append(BandRow(id: "outer-\(pt.hour)", hour: pt.hour, band: "outer", low: pt.p5, high: pt.p95))
+            rows.append(BandRow(id: "inner-\(pt.hour)", hour: pt.hour, band: "inner", low: pt.p25, high: pt.p75))
+        }
+        return rows
+    }
+
+    private func lineRows(_ points: [ChartPoint]) -> [LineRow] {
+        var rows: [LineRow] = []
+        for pt in points {
+            rows.append(LineRow(id: "p5-\(pt.hour)", hour: pt.hour, series: "p5", value: pt.p5))
+            rows.append(LineRow(id: "p25-\(pt.hour)", hour: pt.hour, series: "p25", value: pt.p25))
+            rows.append(LineRow(id: "p75-\(pt.hour)", hour: pt.hour, series: "p75", value: pt.p75))
+            rows.append(LineRow(id: "p95-\(pt.hour)", hour: pt.hour, series: "p95", value: pt.p95))
+            rows.append(LineRow(id: "median-\(pt.hour)", hour: pt.hour, series: "median", value: pt.median))
+        }
+        return rows
     }
 
     private func chartContent(_ analytics: GlucoseAnalytics) -> some View {
@@ -48,6 +81,8 @@ struct DailyPatternChartView: View {
         let thresholds = store.alarmThresholds
         let ul = store.unit.label
         let yMax: Double = 350
+        let bands = bandRows(points)
+        let lines = lineRows(points)
 
         return VStack(alignment: .leading, spacing: 8) {
             // Header
@@ -71,85 +106,55 @@ struct DailyPatternChartView: View {
                 // Threshold reference lines (no labels, just dashed lines)
                 thresholdLines(thresholds: thresholds)
 
-                // P5–P95 outer band (light blue)
-                ForEach(points) { pt in
+                // Percentile area bands — using series to connect all points per band
+                ForEach(bands) { row in
                     AreaMark(
-                        x: .value("Hora", pt.hour),
-                        yStart: .value("P5", pt.p5),
-                        yEnd: .value("P95", pt.p95)
+                        x: .value("Hora", row.hour),
+                        yStart: .value("Low", row.low),
+                        yEnd: .value("High", row.high),
+                        series: .value("Band", row.band)
                     )
-                    .foregroundStyle(Color(hex: "#3b82f6").opacity(0.12))
+                    .foregroundStyle(row.band == "inner"
+                        ? Color(hex: "#3b82f6").opacity(0.30)
+                        : Color(hex: "#3b82f6").opacity(0.12))
                     .interpolationMethod(.monotone)
                 }
 
-                // P25–P75 inner band (medium blue)
-                ForEach(points) { pt in
-                    AreaMark(
-                        x: .value("Hora", pt.hour),
-                        yStart: .value("P25", pt.p25),
-                        yEnd: .value("P75", pt.p75)
-                    )
-                    .foregroundStyle(Color(hex: "#3b82f6").opacity(0.30))
-                    .interpolationMethod(.monotone)
-                }
-
-                // P95 border line
-                ForEach(points) { pt in
-                    LineMark(
-                        x: .value("Hora", pt.hour),
-                        y: .value("P95Line", pt.p95)
-                    )
-                    .foregroundStyle(Color(hex: "#3b82f6").opacity(0.28))
-                    .lineStyle(StrokeStyle(lineWidth: 1))
-                    .interpolationMethod(.monotone)
-                }
-
-                // P75 border line
-                ForEach(points) { pt in
-                    LineMark(
-                        x: .value("Hora", pt.hour),
-                        y: .value("P75Line", pt.p75)
-                    )
-                    .foregroundStyle(Color(hex: "#3b82f6").opacity(0.50))
-                    .lineStyle(StrokeStyle(lineWidth: 1))
-                    .interpolationMethod(.monotone)
-                }
-
-                // P25 border line
-                ForEach(points) { pt in
-                    LineMark(
-                        x: .value("Hora", pt.hour),
-                        y: .value("P25Line", pt.p25)
-                    )
-                    .foregroundStyle(Color(hex: "#3b82f6").opacity(0.50))
-                    .lineStyle(StrokeStyle(lineWidth: 1))
-                    .interpolationMethod(.monotone)
-                }
-
-                // P5 border line
-                ForEach(points) { pt in
-                    LineMark(
-                        x: .value("Hora", pt.hour),
-                        y: .value("P5Line", pt.p5)
-                    )
-                    .foregroundStyle(Color(hex: "#3b82f6").opacity(0.28))
-                    .lineStyle(StrokeStyle(lineWidth: 1))
-                    .interpolationMethod(.monotone)
-                }
-
-                // Median line (P50) — solid blue, thicker
-                ForEach(points) { pt in
-                    LineMark(
-                        x: .value("Hora", pt.hour),
-                        y: .value("Mediana", pt.median)
-                    )
-                    .foregroundStyle(Color(hex: "#3b82f6"))
-                    .lineStyle(StrokeStyle(lineWidth: 2.5))
-                    .interpolationMethod(.monotone)
+                // Border lines — using series to connect all points per line
+                ForEach(lines) { row in
+                    if row.series == "median" {
+                        LineMark(
+                            x: .value("Hora", row.hour),
+                            y: .value("Value", row.value),
+                            series: .value("Line", row.series)
+                        )
+                        .foregroundStyle(Color(hex: "#3b82f6"))
+                        .lineStyle(StrokeStyle(lineWidth: 2.5))
+                        .interpolationMethod(.monotone)
+                    } else if row.series == "p25" || row.series == "p75" {
+                        LineMark(
+                            x: .value("Hora", row.hour),
+                            y: .value("Value", row.value),
+                            series: .value("Line", row.series)
+                        )
+                        .foregroundStyle(Color(hex: "#3b82f6").opacity(0.50))
+                        .lineStyle(StrokeStyle(lineWidth: 1))
+                        .interpolationMethod(.monotone)
+                    } else {
+                        LineMark(
+                            x: .value("Hora", row.hour),
+                            y: .value("Value", row.value),
+                            series: .value("Line", row.series)
+                        )
+                        .foregroundStyle(Color(hex: "#3b82f6").opacity(0.28))
+                        .lineStyle(StrokeStyle(lineWidth: 1))
+                        .interpolationMethod(.monotone)
+                    }
                 }
             }
             .chartYScale(domain: 0...yMax)
             .chartXScale(domain: 0...23)
+            .chartLegend(.hidden)
             .chartYAxis {
                 AxisMarks(position: .leading, values: .automatic(desiredCount: 6)) { value in
                     AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [3, 3]))
